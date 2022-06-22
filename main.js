@@ -3,7 +3,7 @@ class Game {
         this.state = false;
         this.velocity = 0.3;
         this.ticker = 0;
-        this.change = false;
+        this.stream = [];
         this.apple = null;
         this.factory = new Factory(new Rect(20, 20))
         this.ctx = canvas.getContext('2d');
@@ -29,9 +29,11 @@ class Game {
                     v = new Vector(1, 0);
                     break;
             }
-            if (!Vector.isAlter(this.snake.direction, v) && !this.change) {
-                this.snake.direction = v;
-                this.change = true;
+            if (!Vector.isAlter(this.snake.direction, v)) {
+                this.stream.push(() => {
+                    this.snake.direction = v;
+                    this.stream.shift()();
+                })
             }
         });
     }
@@ -64,26 +66,34 @@ class Game {
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
     tick() {
-        clearTimeout(this.ticker);
         requestAnimationFrame(() => {
-            this.ticker = setTimeout(() => {
-                if (this.state) {
-                    this.snake.move();
-                    this.change = false;
-                    this.tick();
-                }
-            }, 1000 * this.velocity);
-        })
+            this.stream.push(() => {
+                setTimeout(() => {
+                    if (this.state) {
+                        this.snake.move();
+                        this.tick();
+                    }
+                }, 1000 * this.velocity);
+            });
+            this.stream.shift()();
+            this.stream.splice(0, this.stream.length)
+        }, this.ctx.canvas)
     }
-    stop() {
+    pause() {
         this.state = false;
     }
+    play() {
+        this.state = true;
+        this.tick();
+    }
     reset() {
-        this.velocity = 0.3;
-        this.stop();
-        this.clearCanvas();
-        this.snake = new Snake(this)
-        this.start()
+        this.stream.push(() => {
+            this.velocity = 0.3;
+            this.pause();
+            this.clearCanvas();
+            this.snake = new Snake(this)
+            this.start()
+        })
     }
 }
 class Rect {
