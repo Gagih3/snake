@@ -1,14 +1,14 @@
 class Game {
     constructor(canvas) {
         this.state = false;
-        this.velocity = 0.3;
+        this.velocity = null;
         this.ticker = 0;
         this.stream = [];
         this.apple = null;
         this.factory = new Factory(new Rect(20, 20))
         this.ctx = canvas.getContext('2d');
         this.clearCanvas();
-        this.snake = new Snake(this);
+        this.snake = null;
         window.addEventListener("keydown", event => {
             let v = this.snake.direction;
             switch (event.code) {
@@ -29,15 +29,19 @@ class Game {
                     v = new Vector(1, 0);
                     break;
             }
-            if (!Vector.isAlter(this.snake.direction, v)) {
+            if (this.stream.length < 2) {
                 this.stream.push(() => {
-                    this.snake.direction = v;
-                    this.stream.shift()();
-                })
+                    if (!Vector.isAlter(this.snake.direction, v)) {
+                        this.snake.direction = v;
+                    }
+                });
             }
         });
     }
     start() {
+        this.clearCanvas();
+        this.snake = new Snake(this);
+        this.velocity = 0.3;
         this.state = true;
         this.spawnApple();
         this.tick();
@@ -66,18 +70,23 @@ class Game {
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
     tick() {
-        requestAnimationFrame(() => {
-            this.stream.push(() => {
+        if (this.state) {
+            requestAnimationFrame(() => {
                 setTimeout(() => {
-                    if (this.state) {
-                        this.snake.move();
-                        this.tick();
+                    const exec = this.stream.shift();
+                    if (typeof exec == "function") {
+                        if (exec.name !== "reset") {
+                            exec();
+                        } else {
+                            exec();
+                            return;
+                        }
                     }
+                    this.snake.move();
+                    this.tick();
                 }, 1000 * this.velocity);
-            });
-            this.stream.shift()();
-            this.stream.splice(0, this.stream.length)
-        }, this.ctx.canvas)
+            }, this.ctx.canvas);
+        }
     }
     pause() {
         this.state = false;
@@ -87,12 +96,10 @@ class Game {
         this.tick();
     }
     reset() {
-        this.stream.push(() => {
-            this.velocity = 0.3;
-            this.pause();
-            this.clearCanvas();
-            this.snake = new Snake(this)
-            this.start()
+        const _this = this;
+        this.stream.unshift(function reset() {
+            _this.pause();
+            _this.start()
         })
     }
 }
