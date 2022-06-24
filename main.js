@@ -3,7 +3,7 @@ class Game {
         this.state = false;
         this.velocity = null;
         this.ticker = 0;
-        this.stream = [];
+        this.stack = [];
         this.apple = null;
         this.factory = new Factory(new Rect(20, 20))
         this.ctx = canvas.getContext('2d');
@@ -29,8 +29,8 @@ class Game {
                     v = new Vector(1, 0);
                     break;
             }
-            if (this.stream.length < 2) {
-                this.stream.push(() => {
+            if (this.stack.length < 2) {
+                this.stack.push(() => {
                     if (!Vector.isAlter(this.snake.direction, v)) {
                         this.snake.direction = v;
                     }
@@ -73,19 +73,13 @@ class Game {
         if (this.state) {
             requestAnimationFrame(() => {
                 setTimeout(() => {
-                    const exec = this.stream.shift();
-                    if (typeof exec == "function") {
-                        if (exec.name !== "reset") {
-                            exec();
-                        } else {
-                            exec();
-                            return;
-                        }
-                    }
+                    this.stack.length > 0 ? this.stack.shift()() : null;
                     this.snake.move();
                     this.tick();
                 }, 1000 * this.velocity);
             }, this.ctx.canvas);
+        } else {
+            this.stack.length > 0 ? this.stack.shift()() : null;
         }
     }
     pause() {
@@ -96,11 +90,7 @@ class Game {
         this.tick();
     }
     reset() {
-        const _this = this;
-        this.stream.unshift(function reset() {
-            _this.pause();
-            _this.start()
-        })
+        this.stack.unshift(this.pause.bind(this), this.start.bind(this))
     }
 }
 class Rect {
