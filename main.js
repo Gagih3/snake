@@ -1,6 +1,11 @@
 class Game {
-    constructor(canvas) {
-        this.factory = new Factory(new Rect(20, 20))
+    constructor({ canvas, pauseBtn, resetBtn, scoreWindow }) {
+        this.factory = new RectFactory(new Rect(20, 20));
+        this.scoreWindow = scoreWindow;
+        this.gameControlButtons = {
+            pauseBtn,
+            resetBtn
+        };
         this.state = false;
         this.velocity = 0.3;
         this.stack = [];
@@ -9,14 +14,24 @@ class Game {
         this.snake = null;
         this.clearCanvas();
         this.listenKeyboard();
+        this.listenControls();
+    }
+    get score() {
+        return parseInt(this.scoreWindow.textContent);
+    }
+    set score(value) {
+        this.scoreWindow.textContent = value;
     }
     start() {
-        this.clearCanvas();
-        this.snake = new Snake(this);
-        this.velocity = 0.3;
-        this.state = true;
-        this.spawnApple();
-        this._tick();
+        if (!this.state) {
+            this.score = 0;
+            this.clearCanvas();
+            this.snake = new Snake(this);
+            this.velocity = 0.3;
+            this.state = true;
+            this.spawnApple();
+            this._tick();
+        }
     }
     spawnApple() {
         var x = Math.floor(Math.random() * (600 / 20)) * 20;
@@ -56,7 +71,11 @@ class Game {
         }
     }
     pause() {
-        this.state = false;
+        if (this.state) {
+            this.state = false;
+        } else {
+            this.play();
+        }
     }
     play() {
         this.state = true;
@@ -95,6 +114,12 @@ class Game {
             }
         });
     }
+    listenControls() {
+        Object.entries(this.gameControlButtons).forEach(([k, v]) => {
+            var func = this[k.substring(0, k.length - 3)];
+            v.addEventListener("click", func.bind(this));
+        });
+    }
 }
 class Rect {
     constructor(width = 10, height, x = 0, y = 0) {
@@ -117,7 +142,7 @@ class Rect {
         return (this.x == rect.x) && (this.y == rect.y)
     }
 }
-class Factory {
+class RectFactory {
     constructor(rect) {
         this.init = rect;
     }
@@ -172,6 +197,7 @@ class Snake {
     }
     collisions() {
         if (this.head.intersecting(this.game.apple)) {
+            this.game.score++;
             this.grow();
             this.game.spawnApple();
         }
@@ -204,5 +230,10 @@ class Snake {
     }
 }
 
-const game = new Game(document.getElementById("canvas"));
+const game = new Game({
+    canvas: document.getElementById("canvas"),
+    pauseBtn: document.getElementById("pause"),
+    resetBtn: document.getElementById("reset"),
+    scoreWindow: document.getElementById("score"),
+});
 game.start()
