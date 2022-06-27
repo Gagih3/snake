@@ -71,11 +71,7 @@ class Game {
         }
     }
     pause() {
-        if (this.state) {
-            this.state = false;
-        } else {
-            this.play();
-        }
+        this.state = false;
     }
     play() {
         this.state = true;
