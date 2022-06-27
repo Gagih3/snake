@@ -48,6 +48,9 @@
     .right-0 {
         right: 0px;
     }
+    .d-none {
+        display: none;
+    }
 </style>
 <body>
     <div class="h-100 d-flex justify-center align-start position-relative">
@@ -55,6 +58,7 @@
         <div id="controls" class="d-flex flex-column align-center p-1 position-absolute right-0">
             <h2 class="p-1 w-100 text-center" id="score">0</h2>
             <button id="pause" class="m-1 w-100">Pause</button>
+            <button id="play" class="m-1 w-100 d-none">Play</button>
             <button id="reset" class="m-1 w-100">Reset</button>
         </div>
     </div>

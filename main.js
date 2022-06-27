@@ -1,12 +1,13 @@
 class Game {
-    constructor({ canvas, pauseBtn, resetBtn, scoreWindow }) {
+    constructor({ canvas, pauseBtn, resetBtn, playBtn, scoreWindow }) {
         this.factory = new RectFactory(new Rect(20, 20));
         this.scoreWindow = scoreWindow;
         this.gameControlButtons = {
             pauseBtn,
-            resetBtn
+            resetBtn,
+            playBtn
         };
-        this.state = false;
+        this._state = false;
         this.velocity = 0.3;
         this.stack = [];
         this.apple = null;
@@ -21,6 +22,14 @@ class Game {
     }
     set score(value) {
         this.scoreWindow.textContent = value;
+    }
+    get state() {
+        return this._state;
+    }
+    set state(value) {
+        this.gameControlButtons.pauseBtn.classList.toggle("d-none", !value);
+        this.gameControlButtons.playBtn.classList.toggle("d-none", value);
+        this._state = value;
     }
     start() {
         if (!this.state) {
@@ -60,7 +69,9 @@ class Game {
         if (this.state) {
             requestAnimationFrame(() => {
                 setTimeout(() => {
-                    this.stack.length > 0 ? this.stack.shift().bind(this)() : null;
+                    if (this.stack.length > 0) {
+                        this.stack.shift().bind(this)();
+                    }
                     this.snake.move();
                     this._tick();
                 }, 1000 * this.velocity);
@@ -79,6 +90,9 @@ class Game {
     }
     reset() {
         this.stack.unshift(this.pause, this.start)
+        if (!this.state) {
+            this._tick()
+        }
     }
     listenKeyboard() {
         window.addEventListener("keydown", event => {
@@ -169,7 +183,7 @@ class Snake {
             const rect = this.factory.rect;
             rect.position = { x: this.direction.x * i * rect.width, y: this.direction.y * i * rect.height }
             this.grow(rect);
-            this.fill(rect)
+            this.draw(rect)
         }
     }
     get head() {
@@ -183,7 +197,7 @@ class Snake {
         this.head = this.body.pop();
         this.clear(this.head);
         this.head.position = this.restrictions(prev);
-        this.fill(this.head);
+        this.draw(this.head);
         this.collisions();
     }
     changeDirection(vector) {
@@ -199,6 +213,7 @@ class Snake {
         }
         for (let i = 1, l = this.body.length; i < l; ++i) { // игнорируем голову
             if (this.head.intersecting(this.body[i])) {
+                console.log("collisions")
                 this.game.reset();
                 break;
             }
@@ -215,7 +230,7 @@ class Snake {
         this.ctx.fillStyle = "#000";
         this.ctx.fillRect(...rect.dimensions)
     }
-    fill(rect) {
+    draw(rect) {
         this.ctx.fillStyle = "#fff";
         this.ctx.fillRect(...rect.dimensions)
         this.ctx.strokeStyle = "#000";
@@ -230,6 +245,7 @@ const game = new Game({
     canvas: document.getElementById("canvas"),
     pauseBtn: document.getElementById("pause"),
     resetBtn: document.getElementById("reset"),
+    playBtn: document.getElementById("play"),
     scoreWindow: document.getElementById("score"),
 });
 game.start()
