@@ -1,5 +1,7 @@
 class Game {
+    #state = false;
     constructor({ canvas, pauseBtn, resetBtn, playBtn, scoreWindow }) {
+        this.ctx = canvas.getContext('2d');
         this.factory = new RectFactory(new Rect(20, 20));
         this.scoreWindow = scoreWindow;
         this.gameControlButtons = {
@@ -7,15 +9,13 @@ class Game {
             resetBtn,
             playBtn
         };
-        this._state = false;
         this.velocity = 0.3;
         this.stack = [];
         this.apple = null;
-        this.ctx = canvas.getContext('2d');
         this.snake = null;
-        this.clearCanvas();
-        this.listenKeyboard();
-        this.listenControls();
+        this.#clearCanvas();
+        this.#listenKeyboard();
+        this.#listenControls();
     }
     get score() {
         return parseInt(this.scoreWindow.textContent);
@@ -24,22 +24,22 @@ class Game {
         this.scoreWindow.textContent = value;
     }
     get state() {
-        return this._state;
+        return this.#state;
     }
     set state(value) {
         this.gameControlButtons.pauseBtn.classList.toggle("d-none", !value);
         this.gameControlButtons.playBtn.classList.toggle("d-none", value);
-        this._state = value;
+        this.#state = value;
     }
     start() {
         if (!this.state) {
             this.score = 0;
-            this.clearCanvas();
+            this.#clearCanvas();
             this.snake = new Snake(this);
             this.velocity = 0.3;
             this.state = true;
             this.spawnApple();
-            this._tick();
+            this.#tick();
         }
     }
     spawnApple() {
@@ -61,40 +61,46 @@ class Game {
             this.velocity -= 0.005;
         }
     }
-    clearCanvas() {
+    #clearCanvas() {
         this.ctx.fillStyle = "#000";
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
-    _tick() {
+    #tick() {
         if (this.state) {
             requestAnimationFrame(() => {
                 setTimeout(() => {
+                    var canNext = true;
                     if (this.stack.length > 0) {
-                        this.stack.shift().bind(this)();
+                        canNext = this.stack.shift().call(this);
                     }
-                    this.snake.move();
-                    this._tick();
+                    if (canNext) {
+                        this.snake.move();
+                        this.#tick();
+                    }
                 }, 1000 * this.velocity);
             }, this.ctx.canvas);
-        } else if (this.stack.length > 0) {
-            this.stack.forEach(func => func.bind(this)());
-            this.stack.splice(0, this.stack.length);
         }
     }
     pause() {
         this.state = false;
     }
     play() {
-        this.state = true;
-        this._tick();
-    }
-    reset() {
-        this.stack.unshift(this.pause, this.start)
         if (!this.state) {
-            this._tick()
+            this.state = true;
+            this.#tick();
         }
     }
-    listenKeyboard() {
+    reset() {
+        this.stack.unshift(() => {
+            this.pause();
+            this.start();
+            return false;
+        })
+        if (!this.state) {
+            this.#tick()
+        }
+    }
+    #listenKeyboard() {
         window.addEventListener("keydown", event => {
             if (this.state) {
                 var v = this.snake.direction;
@@ -119,12 +125,13 @@ class Game {
                 if (this.stack.length < 2) {
                     this.stack.push(() => {
                         this.snake.changeDirection(v);
+                        return true;
                     });
                 }
             }
         });
     }
-    listenControls() {
+    #listenControls() {
         Object.entries(this.gameControlButtons).forEach(([k, v]) => {
             var func = this[k.substring(0, k.length - 3)];
             v.addEventListener("click", func.bind(this));
@@ -182,8 +189,8 @@ class Snake {
         for (let i = length; i >= 0; i--) {
             const rect = this.factory.rect;
             rect.position = { x: this.direction.x * i * rect.width, y: this.direction.y * i * rect.height }
-            this.grow(rect);
-            this.draw(rect)
+            this.#grow(rect);
+            this.#draw(rect)
         }
     }
     get head() {
@@ -195,48 +202,47 @@ class Snake {
     move() {
         const prev = this.head;
         this.head = this.body.pop();
-        this.clear(this.head);
-        this.head.position = this.restrictions(prev);
-        this.draw(this.head);
-        this.collisions();
+        this.#clear(this.head);
+        this.head.position = this.#restrictions(prev);
+        this.#draw(this.head);
+        this.#collisions();
     }
     changeDirection(vector) {
         if (!this.direction.isAlter(vector)) {
             this.direction = vector;
         }
     }
-    collisions() {
+    #collisions() {
         if (this.head.intersecting(this.game.apple)) {
             this.game.score++;
-            this.grow();
+            this.#grow();
             this.game.spawnApple();
         }
         for (let i = 1, l = this.body.length; i < l; ++i) { // игнорируем голову
             if (this.head.intersecting(this.body[i])) {
-                console.log("collisions")
                 this.game.reset();
                 break;
             }
         }
     }
-    restrictions(prev) {
+    #restrictions(prev) {
         const x = prev.x + (this.direction.x * prev.width),
             y = prev.y + (this.direction.y * prev.height),
             right = this.ctx.canvas.width - prev.width,
             bottom = this.ctx.canvas.height - prev.height;
         return { x: x > right ? 0 : x < 0 ? right : x, y: y > bottom ? 0 : y < 0 ? bottom : y }
     }
-    clear(rect) {
+    #clear(rect) {
         this.ctx.fillStyle = "#000";
         this.ctx.fillRect(...rect.dimensions)
     }
-    draw(rect) {
+    #draw(rect) {
         this.ctx.fillStyle = "#fff";
         this.ctx.fillRect(...rect.dimensions)
         this.ctx.strokeStyle = "#000";
         this.ctx.strokeRect(...rect.dimensions)
     }
-    grow(rect) {
+    #grow(rect) {
         this.body.push(rect || this.factory.rect)
     }
 }
