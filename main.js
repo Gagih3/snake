@@ -1,9 +1,11 @@
 class Game {
     #state = false;
-    constructor({ canvas, pauseBtn, resetBtn, playBtn, scoreWindow }) {
+    #velosity = 0.3;
+    constructor({ canvas, pauseBtn, resetBtn, playBtn, scoreWindow, complexity }) {
         this.ctx = canvas.getContext('2d');
         this.factory = new RectFactory(new Rect(20, 20));
         this.scoreWindow = scoreWindow;
+        this.complexitySelector = complexity;
         this.gameControlButtons = {
             pauseBtn,
             resetBtn,
@@ -16,6 +18,9 @@ class Game {
         this.#clearCanvas();
         this.#listenKeyboard();
         this.#listenControls();
+    }
+    get complexity() {
+        return parseFloat(this.complexitySelector.value);
     }
     get score() {
         return parseInt(this.scoreWindow.textContent);
@@ -36,30 +41,27 @@ class Game {
             this.score = 0;
             this.#clearCanvas();
             this.snake = new Snake(this);
-            this.velocity = 0.3;
+            this.velocity = this.#velosity * this.complexity;
             this.state = true;
             this.spawnApple();
             this.#tick();
         }
     }
     spawnApple() {
-        var x = Math.floor(Math.random() * (600 / 20)) * 20;
-        var y = Math.floor(Math.random() * (800 / 20)) * 20;
+        const rect = this.factory.rect;
+        rect.x = Math.floor(Math.random() * (600 / 20)) * 20;
+        rect.y = Math.floor(Math.random() * (800 / 20)) * 20;
         for (let i = 0; i < this.snake.body.length; i++) {
-            if (x == this.snake.body[i].x && y == this.snake.body[i].y) {
+            if (this.snake.body[i].intersecting(rect)) {
                 this.spawnApple();
                 return;
             }
         }
-        this.apple = this.factory.rect;
-        this.apple.position = { x, y }
+        this.apple = rect;
         this.ctx.fillStyle = "red";
-        this.ctx.fillRect(x, y, this.apple.width, this.apple.height);
+        this.ctx.fillRect(...Object.values(this.apple));
         this.ctx.strokeStyle = "#000";
-        this.ctx.strokeRect(x, y, this.apple.width, this.apple.height)
-        if (this.velocity >= 0.1) {
-            this.velocity -= 0.005;
-        }
+        this.ctx.strokeRect(...Object.values(this.apple));
     }
     #clearCanvas() {
         this.ctx.fillStyle = "#000";
@@ -73,7 +75,7 @@ class Game {
                     if (this.stack.length > 0) {
                         canNext = this.stack.shift().call(this);
                     }
-                    if (canNext) {
+                    if (this.state && canNext) {
                         this.snake.move();
                         this.#tick();
                     }
@@ -245,7 +247,10 @@ class Snake {
         this.ctx.strokeRect(...rect.dimensions)
     }
     #grow(rect) {
-        this.body.push(rect || this.factory.rect)
+        this.body.push(rect || this.factory.rect);
+        if (this.game.velocity > 0.025) {
+            this.game.velocity -= 0.005;
+        }
     }
 }
 
@@ -255,5 +260,6 @@ const game = new Game({
     resetBtn: document.getElementById("reset"),
     playBtn: document.getElementById("play"),
     scoreWindow: document.getElementById("score"),
+    complexity: document.getElementById("complexity"),
 });
 game.start()
