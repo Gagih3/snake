@@ -79,6 +79,10 @@ class Game {
                     }
                 }, 1000 * this.velocity);
             }, this.ctx.canvas);
+        } else {
+            if (this.stack.length > 0) {
+                this.stack.shift().call(this);
+            }
         }
     }
     pause() {
@@ -122,12 +126,10 @@ class Game {
                         v = new Vector(1, 0);
                         break;
                 }
-                if (this.stack.length < 2) {
-                    this.stack.push(() => {
-                        this.snake.changeDirection(v);
-                        return true;
-                    });
-                }
+                this.stack.push(() => {
+                    this.snake.changeDirection(v);
+                    return true;
+                });
             }
         });
     }
